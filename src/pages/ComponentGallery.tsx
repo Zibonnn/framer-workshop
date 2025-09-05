@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Copy, Eye, Download, Search } from 'lucide-react'
 import { components } from '../data/components'
+import { componentUrls } from '../data/componentUrls'
 import ComponentPreview from '../components/ComponentPreview'
 import CodeViewer from '../components/CodeViewer'
 import './ComponentGallery.css'
@@ -15,6 +16,7 @@ const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
   const [showCode, setShowCode] = useState(false)
+  const [modalView, setModalView] = useState<'preview' | 'code'>('preview')
 
   const filteredComponents = components.filter(component =>
     component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -30,6 +32,57 @@ const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }
       // You could add a toast notification here
     } catch (error) {
       console.error('Failed to copy code:', error)
+    }
+  }
+
+  const handleCopyComponent = async (componentName: string) => {
+    try {
+      // Check if we have a published component URL
+      const componentUrl = componentUrls[componentName]
+      
+      if (componentUrl && !componentUrl.includes('your-project')) {
+        // If we have a real published URL, copy it directly
+        await navigator.clipboard.writeText(componentUrl)
+        alert(`✅ ${componentName} component URL copied! 
+        
+📋 Next steps:
+1. Open Framer
+2. Paste the URL anywhere in your project
+3. The component will be imported automatically!`)
+      } else {
+        // Fallback: Copy component code with instructions
+        const response = await fetch(`/src/components/${componentName}.tsx`)
+        const code = await response.text()
+        
+        const copyText = `🎨 ${componentName} Component for Framer
+
+📋 INSTRUCTIONS:
+1. Open Framer and create a new component
+2. Replace the default code with the code below
+3. Save the component
+4. The component will be ready to use in your project!
+
+📄 COMPONENT CODE:
+${code}
+
+✨ TIP: This component includes all the necessary imports and property controls for Framer.
+
+🔗 COMPONENT URL (for future use):
+${componentUrl || 'Not yet published - use the code above'}`
+
+        await navigator.clipboard.writeText(copyText)
+        
+        alert(`✅ ${componentName} component copied! 
+        
+📋 Next steps:
+1. Open Framer
+2. Create a new component  
+3. Paste the copied content
+4. Your component is ready!`)
+      }
+    } catch (error) {
+      console.error('Failed to copy component:', error)
+      alert('❌ Failed to copy component. Please try again.')
     }
   }
 
@@ -93,7 +146,10 @@ const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }
             <div className="component-actions">
               <button
                 className="action-btn primary"
-                onClick={() => onComponentSelect(component.id)}
+                onClick={() => {
+                  setSelectedComponent(component.name)
+                  setModalView('preview')
+                }}
               >
                 <Eye className="btn-icon" />
                 Preview
@@ -101,7 +157,10 @@ const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }
               
               <button
                 className="action-btn secondary"
-                onClick={() => setShowCode(true)}
+                onClick={() => {
+                  setSelectedComponent(component.name)
+                  setModalView('code')
+                }}
               >
                 <Copy className="btn-icon" />
                 View Code
@@ -109,7 +168,7 @@ const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }
               
               <button
                 className="action-btn secondary"
-                onClick={() => handleCopyCode(component.name)}
+                onClick={() => handleCopyComponent(component.name)}
               >
                 <Download className="btn-icon" />
                 Copy
@@ -124,6 +183,20 @@ const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{selectedComponent}</h2>
+              <div className="modal-tabs">
+                <button
+                  className={`tab-btn ${modalView === 'preview' ? 'active' : ''}`}
+                  onClick={() => setModalView('preview')}
+                >
+                  Preview
+                </button>
+                <button
+                  className={`tab-btn ${modalView === 'code' ? 'active' : ''}`}
+                  onClick={() => setModalView('code')}
+                >
+                  Code
+                </button>
+              </div>
               <button
                 className="close-btn"
                 onClick={() => setSelectedComponent(null)}
@@ -132,7 +205,11 @@ const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }
               </button>
             </div>
             <div className="modal-content">
-              <ComponentPreview componentName={selectedComponent} isModal={true} />
+              {modalView === 'preview' ? (
+                <ComponentPreview componentName={selectedComponent} isModal={true} />
+              ) : (
+                <CodeViewer componentName={selectedComponent} />
+              )}
             </div>
           </div>
         </div>

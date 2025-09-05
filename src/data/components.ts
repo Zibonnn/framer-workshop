@@ -73,6 +73,21 @@ export const components: Component[] = [
     complexity: 'complex'
   },
   {
+    name: 'FormWithButton',
+    description: 'A simple composite component that combines FormBuilder with Button for easy form submission.',
+    tags: ['form', 'button', 'composite', 'simple', 'linked'],
+    features: [
+      'Form and button combination',
+      'Easy to use interface',
+      'Configurable form field types',
+      'Button variant selection',
+      'Responsive layout',
+      'Clean component structure'
+    ],
+    category: 'Composite',
+    complexity: 'simple'
+  },
+  {
     name: 'FormButtonLink',
     description: 'A simplified approach to linking forms with buttons using Framer Motion values and transforms.',
     tags: ['form', 'button', 'motion', 'binding', 'simple', 'linked'],
@@ -86,6 +101,70 @@ export const components: Component[] = [
       'Customizable animation duration'
     ],
     category: 'Composite',
+    complexity: 'medium'
+  },
+  {
+    name: 'IDLinkingExample',
+    description: 'Demonstrates ID-based component linking that works anywhere in Framer, regardless of frame nesting.',
+    tags: ['form', 'button', 'linking', 'id-based', 'flexible', 'anywhere'],
+    features: [
+      'ID-based component linking',
+      'Works across any frame nesting level',
+      'Cross-page communication',
+      'Simple string-based setup',
+      'Visual instructions',
+      'Multiple layout options',
+      'Real-time linking feedback'
+    ],
+    category: 'Composite',
+    complexity: 'medium'
+  },
+  {
+    name: 'LinkingTest',
+    description: 'Test component for verifying ID-based linking functionality with different test modes.',
+    tags: ['form', 'button', 'linking', 'test', 'debug', 'verification'],
+    features: [
+      'Multiple test modes (simple, advanced, custom)',
+      'Pre-configured ID examples',
+      'Visual test feedback',
+      'Debug information display',
+      'Easy verification process',
+      'Custom ID testing',
+      'Real-time status updates'
+    ],
+    category: 'Testing',
+    complexity: 'simple'
+  },
+  {
+    name: 'SimpleLinkingExample',
+    description: 'A simplified example demonstrating ID-based component linking that works anywhere in Framer.',
+    tags: ['form', 'button', 'linking', 'simple', 'id-based', 'example'],
+    features: [
+      'Simple ID-based linking setup',
+      'Visual instructions and feedback',
+      'Pre-configured component IDs',
+      'Easy to understand and implement',
+      'Works across any frame nesting',
+      'Clean and minimal interface',
+      'Real-time linking demonstration'
+    ],
+    category: 'Composite',
+    complexity: 'simple'
+  },
+  {
+    name: 'GlobalState',
+    description: 'A global state management component that enables communication between FormBuilder and Button components.',
+    tags: ['state', 'management', 'global', 'communication', 'invisible'],
+    features: [
+      'Global state management for component linking',
+      'Invisible component that provides functionality',
+      'Enables communication between any components',
+      'Singleton pattern for consistent state',
+      'Subscribe/unsubscribe functionality',
+      'Automatic cleanup and memory management',
+      'Works with any Framer component'
+    ],
+    category: 'Utility',
     complexity: 'medium'
   }
 ]

@@ -1,11 +1,13 @@
 // Form component with style customization and multiple input types including chip suggestions
-import {
+import React, {
     useState,
     useCallback,
     startTransition,
     type CSSProperties,
 } from "react"
 import { addPropertyControls, ControlType } from "framer"
+import { useMotionValue } from "framer-motion"
+import { setComponentData } from "./SimpleGlobalState"
 
 interface FormBuilderProps {
     fieldType: "text" | "textarea" | "dropdown" | "radio" | "chips"
@@ -22,11 +24,10 @@ interface FormBuilderProps {
     focusColor: string
     textColor: string
     labelColor: string
-    borderRadius: number
-    paddingTop: number
-    paddingRight: number
-    paddingBottom: number
-    paddingLeft: number
+    borderRadius: string
+    heightMode: "fixed" | "fit"
+    height: number
+    padding: string
     labelFont: any
     inputFont: any
     showChips: boolean
@@ -41,19 +42,15 @@ interface FormBuilderProps {
     chipFont: any
     showChipBeforeIcon: boolean
     chipBeforeIcon: any
-    chipBeforeIconColor: string
     showChipAfterIcon: boolean
     chipAfterIcon: any
-    chipAfterIconColor: string
     chipIconSize: number
     showClearButton: boolean
     clearButtonColor: string
     showBeforeIcon: boolean
     beforeIcon: any
-    beforeIconColor: string
     showAfterIcon: boolean
     afterIcon: any
-    afterIconColor: string
     iconSize: number
     showButton: boolean
     buttonText: string
@@ -61,9 +58,13 @@ interface FormBuilderProps {
     buttonEnabledText: string
     buttonDisabledBackground: string
     buttonDisabledText: string
-    buttonBorderRadius: number
-    buttonPadding: number
+    buttonBorderRadius: string
+    buttonPadding: string
     buttonFont: any
+    buttonState?: "enabled" | "disabled"
+    linkedButton?: any
+    componentId?: string
+    linkedButtonId?: string
     style?: CSSProperties
 }
 
@@ -100,11 +101,10 @@ export default function FormBuilder(props: FormBuilderProps) {
         focusColor = "#000000",
         textColor = "#000000",
         labelColor = "#000000",
-        borderRadius = 8,
-        paddingTop = 12,
-        paddingRight = 12,
-        paddingBottom = 12,
-        paddingLeft = 12,
+        borderRadius = "8px",
+        heightMode = "fixed",
+        height = 40,
+        padding = "12px",
         labelFont,
         inputFont,
         showChips = true,
@@ -119,19 +119,15 @@ export default function FormBuilder(props: FormBuilderProps) {
         chipFont,
         showChipBeforeIcon = false,
         chipBeforeIcon,
-        chipBeforeIconColor = "#000000",
         showChipAfterIcon = false,
         chipAfterIcon,
-        chipAfterIconColor = "#000000",
         chipIconSize = 12,
         showClearButton = true,
         clearButtonColor = "#CCCCCC",
         showBeforeIcon = false,
         beforeIcon,
-        beforeIconColor = "#000000",
         showAfterIcon = false,
         afterIcon,
-        afterIconColor = "#000000",
         iconSize = 16,
         showButton = false,
         buttonText = "Submit",
@@ -139,14 +135,46 @@ export default function FormBuilder(props: FormBuilderProps) {
         buttonEnabledText = "#FFFFFF",
         buttonDisabledBackground = "#CCCCCC",
         buttonDisabledText = "#666666",
-        buttonBorderRadius = 8,
-        buttonPadding = 12,
+        buttonBorderRadius = "8px",
+        buttonPadding = "12px",
         buttonFont,
+        buttonState,
+        linkedButton,
+        componentId = "form-" + Math.random().toString(36).substr(2, 9),
     } = props
 
     const [value, setValue] = useState("")
     const [selectedChips, setSelectedChips] = useState<string[]>([])
     const [isFocused, setIsFocused] = useState(false)
+
+    // Motion values for linking with external components
+    const buttonDisabledMotion = useMotionValue(false)
+    const hasContentMotion = useMotionValue(false)
+
+    // Component linking system - will be initialized after hasContent and isButtonDisabled are calculated
+    // const { createLink, updateData } = useComponentLink({
+    //     id: componentId,
+    //     type: 'form',
+    //     data: {
+    //         hasContent: false, // Will be updated in useEffect
+    //         isButtonDisabled: true, // Will be updated in useEffect
+    //         value,
+    //         selectedChips,
+    //         fieldType,
+    //         label
+    //     },
+    //     onDataUpdate: (data) => {
+    //         // Handle updates from linked components
+    //         console.log('Form received update:', data)
+    //     }
+    // })
+
+    // Auto-link with button if ID is provided
+    // React.useEffect(() => {
+    //     if (linkedButtonId && linkedButtonId.trim() !== '') {
+    //         createLink(linkedButtonId)
+    //     }
+    // }, [linkedButtonId, createLink])
 
     const handleInputChange = useCallback((newValue: string) => {
         startTransition(() => setValue(newValue))
@@ -155,22 +183,18 @@ export default function FormBuilder(props: FormBuilderProps) {
     const handleChipClick = useCallback(
         (chip: string) => {
             if (fieldType === "chips") {
-                startTransition(() => {
-                    setSelectedChips((prev) =>
-                        prev.includes(chip)
-                            ? prev.filter((c) => c !== chip)
-                            : [...prev, chip]
-                    )
-                })
+                setSelectedChips((prev) =>
+                    prev.includes(chip)
+                        ? prev.filter((c) => c !== chip)
+                        : [...prev, chip]
+                )
             } else {
                 // For text and textarea fields, accumulate chips with comma separation
-                startTransition(() => {
-                    if (value.trim() === "") {
-                        setValue(chip)
-                    } else {
-                        setValue((prev) => prev + ", " + chip)
-                    }
-                })
+                if (value.trim() === "") {
+                    setValue(chip)
+                } else {
+                    setValue((prev) => prev + ", " + chip)
+                }
             }
         },
         [fieldType, value]
@@ -185,7 +209,8 @@ export default function FormBuilder(props: FormBuilderProps) {
     }, [])
 
     const handleClear = useCallback(() => {
-        startTransition(() => setValue(""))
+        setValue("")
+        setSelectedChips([])
     }, [])
 
     const handleButtonClick = useCallback(() => {
@@ -194,15 +219,25 @@ export default function FormBuilder(props: FormBuilderProps) {
     }, [value])
 
     const getInputPadding = () => {
-        let leftPadding = paddingLeft
-        let rightPadding = paddingRight
+        // Parse padding string (e.g., "12px" or "12px 16px 12px 16px")
+        const paddingValues = padding.split(' ').map(p => parseInt(p.replace('px', '')))
+        const [top, right, bottom, left] = paddingValues.length === 1 
+            ? [paddingValues[0], paddingValues[0], paddingValues[0], paddingValues[0]]
+            : paddingValues.length === 2
+            ? [paddingValues[0], paddingValues[1], paddingValues[0], paddingValues[1]]
+            : paddingValues.length === 4
+            ? paddingValues
+            : [12, 12, 12, 12] // fallback
+
+        let leftPadding = left
+        let rightPadding = right
 
         if (showBeforeIcon && beforeIcon) {
-            leftPadding = paddingLeft + iconSize + 8
+            leftPadding = left + iconSize + 8
         }
 
         if (showAfterIcon && afterIcon) {
-            rightPadding = paddingRight + iconSize + 8
+            rightPadding = right + iconSize + 8
         }
 
         if (
@@ -210,23 +245,25 @@ export default function FormBuilder(props: FormBuilderProps) {
             value &&
             (fieldType === "text" || fieldType === "textarea")
         ) {
-            rightPadding = Math.max(rightPadding, paddingRight + 32)
+            rightPadding = Math.max(rightPadding, right + 32)
         }
 
-        return { leftPadding, rightPadding }
+        return { leftPadding, rightPadding, topPadding: top, bottomPadding: bottom }
     }
 
-    const { leftPadding, rightPadding } = getInputPadding()
+    const { leftPadding, rightPadding, topPadding, bottomPadding } = getInputPadding()
 
     const inputStyles: CSSProperties = {
         width: "100%",
+        ...(heightMode === "fixed" && { height: `${height}px` }),
+        ...(heightMode === "fit" && { minHeight: `${height}px` }),
         paddingLeft: `${leftPadding}px`,
         paddingRight: `${rightPadding}px`,
-        paddingTop: `${paddingTop}px`,
-        paddingBottom: `${paddingBottom}px`,
+        paddingTop: `${topPadding}px`,
+        paddingBottom: `${bottomPadding}px`,
         backgroundColor,
         border: `1px solid ${isFocused ? focusColor : borderColor}`,
-        borderRadius: `${borderRadius}px`,
+        borderRadius: borderRadius,
         color: textColor,
         outline: "none",
         transition: "border-color 0.2s ease",
@@ -234,16 +271,22 @@ export default function FormBuilder(props: FormBuilderProps) {
         fontSize: inputFont?.fontSize || "14px",
     }
 
-    const placeholderStyles: CSSProperties = {
-        color: placeholderColor,
-    }
 
     const renderIcon = (
         icon: any,
-        color: string,
         position: "before" | "after"
     ) => {
         if (!icon) return null
+
+        // Parse padding to get left/right values
+        const paddingValues = padding.split(' ').map(p => parseInt(p.replace('px', '')))
+        const [, right, , left] = paddingValues.length === 1 
+            ? [paddingValues[0], paddingValues[0], paddingValues[0], paddingValues[0]]
+            : paddingValues.length === 2
+            ? [paddingValues[0], paddingValues[1], paddingValues[0], paddingValues[1]]
+            : paddingValues.length === 4
+            ? paddingValues
+            : [12, 12, 12, 12] // fallback
 
         const iconStyle: CSSProperties = {
             position: "absolute",
@@ -251,11 +294,10 @@ export default function FormBuilder(props: FormBuilderProps) {
             transform: "translateY(-50%)",
             [position === "before" ? "left" : "right"]:
                 position === "before"
-                    ? `${paddingLeft}px`
-                    : `${paddingRight}px`,
+                    ? `${left}px`
+                    : `${right}px`,
             width: `${iconSize}px`,
             height: `${iconSize}px`,
-            color: color,
             pointerEvents: "none",
             zIndex: 1,
         }
@@ -263,11 +305,7 @@ export default function FormBuilder(props: FormBuilderProps) {
         return <div style={iconStyle}>{icon}</div>
     }
 
-    const renderChipIcon = (
-        icon: any,
-        color: string,
-        position: "before" | "after"
-    ) => {
+    const renderChipIcon = (icon: any) => {
         if (!icon) return null
 
         return (
@@ -275,7 +313,6 @@ export default function FormBuilder(props: FormBuilderProps) {
                 style={{
                     width: `${chipIconSize}px`,
                     height: `${chipIconSize}px`,
-                    color: color,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -288,7 +325,37 @@ export default function FormBuilder(props: FormBuilderProps) {
 
     // Check if form has content for button state
     const hasContent = value.trim().length > 0 || selectedChips.length > 0
-    const isButtonDisabled = !hasContent
+    const isButtonDisabled = buttonState ? buttonState === "disabled" : !hasContent
+
+    // Update motion values when content changes
+    React.useEffect(() => {
+        hasContentMotion.set(hasContent)
+        buttonDisabledMotion.set(isButtonDisabled)
+    }, [hasContent, isButtonDisabled, hasContentMotion, buttonDisabledMotion])
+
+    // Update component data when form state changes
+    React.useEffect(() => {
+        setComponentData(componentId, 'form', {
+            hasContent,
+            isButtonDisabled,
+            value,
+            selectedChips,
+            fieldType,
+            label
+        })
+    }, [hasContent, isButtonDisabled, value, selectedChips, fieldType, label, componentId])
+
+    // Sync with linked button if provided
+    React.useEffect(() => {
+        if (linkedButton && linkedButton.set) {
+            linkedButton.set({
+                disabled: isButtonDisabled,
+                hasContent: hasContent,
+                value: value,
+                selectedChips: selectedChips
+            })
+        }
+    }, [isButtonDisabled, hasContent, value, selectedChips, linkedButton])
 
     const renderInput = () => {
         switch (fieldType) {
@@ -297,10 +364,10 @@ export default function FormBuilder(props: FormBuilderProps) {
                     <div style={{ position: "relative" }}>
                         {showBeforeIcon &&
                             beforeIcon &&
-                            renderIcon(beforeIcon, beforeIconColor, "before")}
+                            renderIcon(beforeIcon, "before")}
                         {showAfterIcon &&
                             afterIcon &&
-                            renderIcon(afterIcon, afterIconColor, "after")}
+                            renderIcon(afterIcon, "after")}
                         <textarea
                             value={value}
                             onChange={(e) => handleInputChange(e.target.value)}
@@ -311,8 +378,8 @@ export default function FormBuilder(props: FormBuilderProps) {
                             className="form-builder-textarea"
                             style={{
                                 ...inputStyles,
-                                minHeight: "80px",
-                                resize: "vertical",
+                                minHeight: heightMode === "fit" ? `${height}px` : undefined,
+                                resize: heightMode === "fit" ? "none" : "vertical",
                                 fontFamily: "inherit",
                             }}
                         />
@@ -324,7 +391,7 @@ export default function FormBuilder(props: FormBuilderProps) {
                                     position: "absolute",
                                     right:
                                         showAfterIcon && afterIcon
-                                            ? `${paddingRight + iconSize + 8}px`
+                                            ? `${rightPadding + iconSize + 8}px`
                                             : "8px",
                                     top: "8px",
                                     background: "none",
@@ -362,16 +429,17 @@ export default function FormBuilder(props: FormBuilderProps) {
                     <div style={{ position: "relative" }}>
                         {showBeforeIcon &&
                             beforeIcon &&
-                            renderIcon(beforeIcon, beforeIconColor, "before")}
+                            renderIcon(beforeIcon, "before")}
                         {showAfterIcon &&
                             afterIcon &&
-                            renderIcon(afterIcon, afterIconColor, "after")}
+                            renderIcon(afterIcon, "after")}
                         <select
                             value={value}
                             onChange={(e) => handleInputChange(e.target.value)}
                             onFocus={handleFocus}
                             onBlur={handleBlur}
                             required={required}
+                            aria-label={placeholder}
                             style={{
                                 ...inputStyles,
                                 cursor: "pointer",
@@ -380,7 +448,7 @@ export default function FormBuilder(props: FormBuilderProps) {
                                 backgroundRepeat: "no-repeat",
                                 backgroundPosition:
                                     showAfterIcon && afterIcon
-                                        ? `right ${paddingRight + iconSize + 16}px center`
+                                        ? `right ${rightPadding + iconSize + 16}px center`
                                         : "right 12px center",
                                 backgroundSize: "16px",
                             }}
@@ -443,7 +511,7 @@ export default function FormBuilder(props: FormBuilderProps) {
                     <div
                         style={{
                             ...inputStyles,
-                            minHeight: "fit-content",
+                            minHeight: heightMode === "fit" ? `${height}px` : undefined,
                             display: "flex",
                             flexWrap: "wrap",
                             gap: "6px",
@@ -458,12 +526,12 @@ export default function FormBuilder(props: FormBuilderProps) {
                             <div
                                 style={{
                                     position: "absolute",
-                                    left: `${paddingLeft}px`,
+                                    left: `${leftPadding}px`,
                                     top: "50%",
                                     transform: "translateY(-50%)",
                                     width: `${iconSize}px`,
                                     height: `${iconSize}px`,
-                                    color: beforeIconColor,
+                                    color: "#000000",
                                     pointerEvents: "none",
                                     zIndex: 1,
                                 }}
@@ -475,12 +543,12 @@ export default function FormBuilder(props: FormBuilderProps) {
                             <div
                                 style={{
                                     position: "absolute",
-                                    right: `${paddingRight}px`,
+                                    right: `${rightPadding}px`,
                                     top: "50%",
                                     transform: "translateY(-50%)",
                                     width: `${iconSize}px`,
                                     height: `${iconSize}px`,
-                                    color: afterIconColor,
+                                    color: "#000000",
                                     pointerEvents: "none",
                                     zIndex: 1,
                                 }}
@@ -509,19 +577,11 @@ export default function FormBuilder(props: FormBuilderProps) {
                             >
                                 {showChipBeforeIcon &&
                                     chipBeforeIcon &&
-                                    renderChipIcon(
-                                        chipBeforeIcon,
-                                        chipSelectedTextColor,
-                                        "before"
-                                    )}
+                                    renderChipIcon(chipBeforeIcon)}
                                 {chip}
                                 {showChipAfterIcon &&
                                     chipAfterIcon &&
-                                    renderChipIcon(
-                                        chipAfterIcon,
-                                        chipSelectedTextColor,
-                                        "after"
-                                    )}
+                                    renderChipIcon(chipAfterIcon)}
                                 <span style={{ fontSize: "10px" }}>×</span>
                             </span>
                         ))}
@@ -530,14 +590,52 @@ export default function FormBuilder(props: FormBuilderProps) {
                                 style={{
                                     color: placeholderColor,
                                     fontSize: inputFont?.fontSize || "14px",
-                                    marginLeft:
-                                        showBeforeIcon && beforeIcon
-                                            ? `${iconSize + 8}px`
-                                            : "0px",
+                                                                    marginLeft:
+                                    showBeforeIcon && beforeIcon
+                                        ? `${leftPadding + iconSize + 8}px`
+                                        : "0px",
                                 }}
                             >
                                 {placeholder}
                             </span>
+                        )}
+                        {showClearButton && selectedChips.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={handleClear}
+                                style={{
+                                    position: "absolute",
+                                    right:
+                                        showAfterIcon && afterIcon
+                                            ? `${rightPadding + iconSize + 8}px`
+                                            : "8px",
+                                    top: "8px",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    color: clearButtonColor,
+                                    fontSize: "16px",
+                                    width: "24px",
+                                    height: "24px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    borderRadius: "50%",
+                                    transition: "background-color 0.2s ease",
+                                    zIndex: 2,
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                        "#F0F0F0"
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                        "transparent"
+                                }}
+                                aria-label="Clear input"
+                            >
+                                ×
+                            </button>
                         )}
                     </div>
                 )
@@ -547,10 +645,10 @@ export default function FormBuilder(props: FormBuilderProps) {
                     <div style={{ position: "relative" }}>
                         {showBeforeIcon &&
                             beforeIcon &&
-                            renderIcon(beforeIcon, beforeIconColor, "before")}
+                            renderIcon(beforeIcon, "before")}
                         {showAfterIcon &&
                             afterIcon &&
-                            renderIcon(afterIcon, afterIconColor, "after")}
+                            renderIcon(afterIcon, "after")}
                         <input
                             type="text"
                             value={value}
@@ -570,10 +668,9 @@ export default function FormBuilder(props: FormBuilderProps) {
                                     position: "absolute",
                                     right:
                                         showAfterIcon && afterIcon
-                                            ? `${paddingRight + iconSize + 8}px`
+                                            ? `${rightPadding + iconSize + 8}px`
                                             : "8px",
-                                    top: "50%",
-                                    transform: "translateY(-50%)",
+                                    top: "8px",
                                     background: "none",
                                     border: "none",
                                     cursor: "pointer",
@@ -702,23 +799,11 @@ export default function FormBuilder(props: FormBuilderProps) {
                                 >
                                     {showChipBeforeIcon &&
                                         chipBeforeIcon &&
-                                        renderChipIcon(
-                                            chipBeforeIcon,
-                                            selectedChips.includes(chip)
-                                                ? chipSelectedTextColor
-                                                : chipBeforeIconColor,
-                                            "before"
-                                        )}
+                                        renderChipIcon(chipBeforeIcon)}
                                     {chip}
                                     {showChipAfterIcon &&
                                         chipAfterIcon &&
-                                        renderChipIcon(
-                                            chipAfterIcon,
-                                            selectedChips.includes(chip)
-                                                ? chipSelectedTextColor
-                                                : chipAfterIconColor,
-                                            "after"
-                                        )}
+                                        renderChipIcon(chipAfterIcon)}
                                 </button>
                             ))}
                         </div>
@@ -737,8 +822,8 @@ export default function FormBuilder(props: FormBuilderProps) {
                                 ? buttonDisabledText
                                 : buttonEnabledText,
                             border: "none",
-                            borderRadius: `${buttonBorderRadius}px`,
-                            padding: `${buttonPadding}px ${buttonPadding * 2}px`,
+                            borderRadius: buttonBorderRadius,
+                            padding: buttonPadding,
                             cursor: isButtonDisabled
                                 ? "not-allowed"
                                 : "pointer",
@@ -759,6 +844,7 @@ export default function FormBuilder(props: FormBuilderProps) {
 }
 
 addPropertyControls(FormBuilder, {
+    // === BASIC SETTINGS ===
     fieldType: {
         type: ControlType.Enum,
         title: "Field Type",
@@ -766,6 +852,15 @@ addPropertyControls(FormBuilder, {
         optionTitles: ["Text", "Text Area", "Dropdown", "Radio", "Chips"],
         defaultValue: "text",
     },
+    required: {
+        type: ControlType.Boolean,
+        title: "Required",
+        defaultValue: false,
+        enabledTitle: "Yes",
+        disabledTitle: "No",
+    },
+
+    // === LABEL SETTINGS ===
     showLabel: {
         type: ControlType.Boolean,
         title: "Show Label",
@@ -779,28 +874,30 @@ addPropertyControls(FormBuilder, {
         defaultValue: "Field Label",
         hidden: ({ showLabel }) => !showLabel,
     },
-    placeholder: {
-        type: ControlType.String,
-        title: "Placeholder",
-        defaultValue: "Enter text...",
-    },
-    placeholderColor: {
+    labelColor: {
         type: ControlType.Color,
-        title: "Placeholder Color",
-        defaultValue: "#999999",
+        title: "Label Color",
+        defaultValue: "#000000",
+        hidden: ({ showLabel }) => !showLabel,
     },
-    required: {
-        type: ControlType.Boolean,
-        title: "Required",
-        defaultValue: false,
-        enabledTitle: "Yes",
-        disabledTitle: "No",
+    labelFont: {
+        type: ControlType.Font,
+        title: "Label Font",
+        defaultValue: {
+            fontSize: "14px",
+            variant: "Medium",
+            letterSpacing: "-0.01em",
+            lineHeight: "1.2em",
+        },
+        controls: "extended",
+        defaultFontType: "sans-serif",
+        hidden: ({ showLabel }) => !showLabel,
     },
 
-    // Field-specific options
+    // === FIELD-SPECIFIC OPTIONS ===
     dropdownOptions: {
         type: ControlType.Array,
-        title: "Options",
+        title: "Dropdown Options",
         control: {
             type: ControlType.Object,
             controls: {
@@ -823,7 +920,7 @@ addPropertyControls(FormBuilder, {
     },
     radioOptions: {
         type: ControlType.Array,
-        title: "Options",
+        title: "Radio Options",
         control: {
             type: ControlType.Object,
             controls: {
@@ -845,7 +942,81 @@ addPropertyControls(FormBuilder, {
         hidden: ({ fieldType }) => fieldType !== "radio",
     },
 
-    // Chip settings
+    // === INPUT CONTENT ===
+    placeholder: {
+        type: ControlType.String,
+        title: "Placeholder",
+        defaultValue: "Enter text...",
+        hidden: ({ fieldType }) => fieldType === "radio",
+    },
+    placeholderColor: {
+        type: ControlType.Color,
+        title: "Placeholder Color",
+        defaultValue: "#999999",
+        hidden: ({ fieldType }) => fieldType === "radio",
+    },
+
+    // === CLEAR BUTTON ===
+    showClearButton: {
+        type: ControlType.Boolean,
+        title: "Clear Button",
+        defaultValue: true,
+        enabledTitle: "Show",
+        disabledTitle: "Hide",
+        hidden: ({ fieldType }) =>
+            fieldType !== "text" && fieldType !== "textarea" && fieldType !== "chips",
+    },
+    clearButtonColor: {
+        type: ControlType.Color,
+        title: "Clear Button Color",
+        defaultValue: "#CCCCCC",
+        hidden: ({ fieldType, showClearButton }) =>
+            !showClearButton ||
+            (fieldType !== "text" && fieldType !== "textarea" && fieldType !== "chips"),
+    },
+
+    // === FIELD ICONS ===
+    showBeforeIcon: {
+        type: ControlType.Boolean,
+        title: "Before Icon",
+        defaultValue: false,
+        enabledTitle: "Show",
+        disabledTitle: "Hide",
+        hidden: ({ fieldType }) => fieldType === "radio",
+    },
+    beforeIcon: {
+        type: ControlType.ComponentInstance,
+        title: "Before Icon",
+        hidden: ({ showBeforeIcon, fieldType }) =>
+            !showBeforeIcon || fieldType === "radio",
+    },
+    showAfterIcon: {
+        type: ControlType.Boolean,
+        title: "After Icon",
+        defaultValue: false,
+        enabledTitle: "Show",
+        disabledTitle: "Hide",
+        hidden: ({ fieldType }) => fieldType === "radio",
+    },
+    afterIcon: {
+        type: ControlType.ComponentInstance,
+        title: "After Icon",
+        hidden: ({ showAfterIcon, fieldType }) =>
+            !showAfterIcon || fieldType === "radio",
+    },
+    iconSize: {
+        type: ControlType.Number,
+        title: "Icon Size",
+        defaultValue: 16,
+        min: 12,
+        max: 24,
+        step: 1,
+        unit: "px",
+        hidden: ({ showBeforeIcon, showAfterIcon, fieldType }) =>
+            (!showBeforeIcon && !showAfterIcon) || fieldType === "radio",
+    },
+
+    // === CHIP SETTINGS ===
     showChips: {
         type: ControlType.Boolean,
         title: "Show Chips",
@@ -876,7 +1047,7 @@ addPropertyControls(FormBuilder, {
                 fieldType !== "chips"),
     },
 
-    // Chip styling
+    // === CHIP STYLING ===
     chipBackgroundColor: {
         type: ControlType.Color,
         title: "Chip Background",
@@ -987,7 +1158,7 @@ addPropertyControls(FormBuilder, {
                 fieldType !== "chips"),
     },
 
-    // Chip icons
+    // === CHIP ICONS ===
     showChipBeforeIcon: {
         type: ControlType.Boolean,
         title: "Chip Before Icon",
@@ -1003,17 +1174,6 @@ addPropertyControls(FormBuilder, {
     chipBeforeIcon: {
         type: ControlType.ComponentInstance,
         title: "Before Icon",
-        hidden: ({ fieldType, showChips, showChipBeforeIcon }) =>
-            !showChips ||
-            !showChipBeforeIcon ||
-            (fieldType !== "text" &&
-                fieldType !== "textarea" &&
-                fieldType !== "chips"),
-    },
-    chipBeforeIconColor: {
-        type: ControlType.Color,
-        title: "Before Icon Color",
-        defaultValue: "#000000",
         hidden: ({ fieldType, showChips, showChipBeforeIcon }) =>
             !showChips ||
             !showChipBeforeIcon ||
@@ -1043,17 +1203,6 @@ addPropertyControls(FormBuilder, {
                 fieldType !== "textarea" &&
                 fieldType !== "chips"),
     },
-    chipAfterIconColor: {
-        type: ControlType.Color,
-        title: "After Icon Color",
-        defaultValue: "#000000",
-        hidden: ({ fieldType, showChips, showChipAfterIcon }) =>
-            !showChips ||
-            !showChipAfterIcon ||
-            (fieldType !== "text" &&
-                fieldType !== "textarea" &&
-                fieldType !== "chips"),
-    },
     chipIconSize: {
         type: ControlType.Number,
         title: "Chip Icon Size",
@@ -1075,81 +1224,7 @@ addPropertyControls(FormBuilder, {
                 fieldType !== "chips"),
     },
 
-    // Clear button
-    showClearButton: {
-        type: ControlType.Boolean,
-        title: "Clear Button",
-        defaultValue: true,
-        enabledTitle: "Show",
-        disabledTitle: "Hide",
-        hidden: ({ fieldType }) =>
-            fieldType !== "text" && fieldType !== "textarea",
-    },
-    clearButtonColor: {
-        type: ControlType.Color,
-        title: "Clear Button Color",
-        defaultValue: "#CCCCCC",
-        hidden: ({ fieldType, showClearButton }) =>
-            !showClearButton ||
-            (fieldType !== "text" && fieldType !== "textarea"),
-    },
-
-    // Field icons
-    showBeforeIcon: {
-        type: ControlType.Boolean,
-        title: "Before Icon",
-        defaultValue: false,
-        enabledTitle: "Show",
-        disabledTitle: "Hide",
-        hidden: ({ fieldType }) => fieldType === "radio",
-    },
-    beforeIcon: {
-        type: ControlType.ComponentInstance,
-        title: "Before Icon",
-        hidden: ({ showBeforeIcon, fieldType }) =>
-            !showBeforeIcon || fieldType === "radio",
-    },
-    beforeIconColor: {
-        type: ControlType.Color,
-        title: "Before Icon Color",
-        defaultValue: "#000000",
-        hidden: ({ showBeforeIcon, fieldType }) =>
-            !showBeforeIcon || fieldType === "radio",
-    },
-    showAfterIcon: {
-        type: ControlType.Boolean,
-        title: "After Icon",
-        defaultValue: false,
-        enabledTitle: "Show",
-        disabledTitle: "Hide",
-        hidden: ({ fieldType }) => fieldType === "radio",
-    },
-    afterIcon: {
-        type: ControlType.ComponentInstance,
-        title: "After Icon",
-        hidden: ({ showAfterIcon, fieldType }) =>
-            !showAfterIcon || fieldType === "radio",
-    },
-    afterIconColor: {
-        type: ControlType.Color,
-        title: "After Icon Color",
-        defaultValue: "#000000",
-        hidden: ({ showAfterIcon, fieldType }) =>
-            !showAfterIcon || fieldType === "radio",
-    },
-    iconSize: {
-        type: ControlType.Number,
-        title: "Icon Size",
-        defaultValue: 16,
-        min: 12,
-        max: 24,
-        step: 1,
-        unit: "px",
-        hidden: ({ showBeforeIcon, showAfterIcon, fieldType }) =>
-            (!showBeforeIcon && !showAfterIcon) || fieldType === "radio",
-    },
-
-    // Styling
+    // === FIELD STYLING ===
     backgroundColor: {
         type: ControlType.Color,
         title: "Background",
@@ -1166,85 +1241,46 @@ addPropertyControls(FormBuilder, {
         type: ControlType.Color,
         title: "Focus Color",
         defaultValue: "#000000",
+        hidden: ({ fieldType }) => fieldType === "radio",
     },
     textColor: {
         type: ControlType.Color,
         title: "Text Color",
         defaultValue: "#000000",
-    },
-    labelColor: {
-        type: ControlType.Color,
-        title: "Label Color",
-        defaultValue: "#000000",
-        hidden: ({ showLabel }) => !showLabel,
+        hidden: ({ fieldType }) => fieldType === "radio",
     },
     borderRadius: {
-        type: ControlType.Number,
+        type: ControlType.BorderRadius,
         title: "Border Radius",
-        defaultValue: 8,
-        min: 0,
-        max: 20,
+        defaultValue: "8px",
+        hidden: ({ fieldType }) => fieldType === "radio",
+    },
+    heightMode: {
+        type: ControlType.Enum,
+        title: "Height Mode",
+        options: ["fixed", "fit"],
+        optionTitles: ["Fixed", "Fit"],
+        defaultValue: "fixed",
+        hidden: ({ fieldType }) => fieldType === "radio",
+    },
+    height: {
+        type: ControlType.Number,
+        title: "Field Height",
+        defaultValue: 40,
+        min: 20,
+        max: 100,
         step: 1,
         unit: "px",
+        hidden: ({ fieldType, heightMode }) => fieldType === "radio" || heightMode === "fit",
+    },
+    padding: {
+        type: ControlType.Padding,
+        title: "Padding",
+        defaultValue: "12px",
         hidden: ({ fieldType }) => fieldType === "radio",
     },
 
-    // Padding controls
-    paddingTop: {
-        type: ControlType.Number,
-        title: "Padding Top",
-        defaultValue: 12,
-        min: 0,
-        max: 32,
-        step: 1,
-        unit: "px",
-        hidden: ({ fieldType }) => fieldType === "radio",
-    },
-    paddingRight: {
-        type: ControlType.Number,
-        title: "Padding Right",
-        defaultValue: 12,
-        min: 0,
-        max: 32,
-        step: 1,
-        unit: "px",
-        hidden: ({ fieldType }) => fieldType === "radio",
-    },
-    paddingBottom: {
-        type: ControlType.Number,
-        title: "Padding Bottom",
-        defaultValue: 12,
-        min: 0,
-        max: 32,
-        step: 1,
-        unit: "px",
-        hidden: ({ fieldType }) => fieldType === "radio",
-    },
-    paddingLeft: {
-        type: ControlType.Number,
-        title: "Padding Left",
-        defaultValue: 12,
-        min: 0,
-        max: 32,
-        step: 1,
-        unit: "px",
-        hidden: ({ fieldType }) => fieldType === "radio",
-    },
-
-    // Typography
-    labelFont: {
-        type: ControlType.Font,
-        title: "Label Font",
-        defaultValue: {
-            fontSize: "14px",
-            variant: "Medium",
-            letterSpacing: "-0.01em",
-            lineHeight: "1.2em",
-        },
-        controls: "extended",
-        defaultFontType: "sans-serif",
-        hidden: ({ showLabel }) => !showLabel,
-    },
+    // === TYPOGRAPHY ===
     inputFont: {
         type: ControlType.Font,
         title: "Input Font",
@@ -1256,9 +1292,10 @@ addPropertyControls(FormBuilder, {
         },
         controls: "extended",
         defaultFontType: "sans-serif",
+        hidden: ({ fieldType }) => fieldType === "radio",
     },
 
-    // Button controls
+    // === BUTTON SETTINGS ===
     showButton: {
         type: ControlType.Boolean,
         title: "Show Button",
@@ -1272,6 +1309,33 @@ addPropertyControls(FormBuilder, {
         defaultValue: "Submit",
         hidden: ({ showButton }) => !showButton,
     },
+    buttonState: {
+        type: ControlType.Enum,
+        title: "Button State",
+        options: ["enabled", "disabled"],
+        optionTitles: ["Enabled", "Disabled"],
+        defaultValue: "enabled",
+        hidden: ({ showButton }) => !showButton,
+    },
+    linkedButton: {
+        type: ControlType.ComponentInstance,
+        title: "Linked Button",
+        description: "Link to an external Button component anywhere in your project",
+    },
+    componentId: {
+        type: ControlType.String,
+        title: "Component ID",
+        defaultValue: "form-123",
+        description: "Unique identifier for this form (auto-generated if empty)",
+    },
+    linkedButtonId: {
+        type: ControlType.String,
+        title: "Linked Button ID",
+        defaultValue: "",
+        description: "Enter the Button's Component ID to link them (works anywhere in Framer)",
+    },
+
+    // === BUTTON STYLING ===
     buttonEnabledBackground: {
         type: ControlType.Color,
         title: "Button Background",
@@ -1297,23 +1361,15 @@ addPropertyControls(FormBuilder, {
         hidden: ({ showButton }) => !showButton,
     },
     buttonBorderRadius: {
-        type: ControlType.Number,
+        type: ControlType.BorderRadius,
         title: "Button Border Radius",
-        defaultValue: 8,
-        min: 0,
-        max: 20,
-        step: 1,
-        unit: "px",
+        defaultValue: "8px",
         hidden: ({ showButton }) => !showButton,
     },
     buttonPadding: {
-        type: ControlType.Number,
+        type: ControlType.Padding,
         title: "Button Padding",
-        defaultValue: 12,
-        min: 4,
-        max: 32,
-        step: 1,
-        unit: "px",
+        defaultValue: "12px",
         hidden: ({ showButton }) => !showButton,
     },
     buttonFont: {

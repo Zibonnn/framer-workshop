@@ -566,6 +566,33 @@
   max-height: 90vh;
   overflow: hidden;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 800px;
+}
+
+@media (max-width: 768px) {
+  .modal {
+    max-width: 95vw;
+    max-height: 95vh;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 16px;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .modal-tabs {
+    margin: 0;
+    justify-content: center;
+  }
+  
+  .tab-btn {
+    flex: 1 1;
+    text-align: center;
+  }
 }
 
 .modal.code-modal {
@@ -579,6 +606,35 @@
   justify-content: space-between;
   padding: 24px;
   border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 16px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: 1px solid #E5E7EB;
+  background: white;
+  color: #6B7280;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background: #F9FAFB;
+  color: #374151;
+}
+
+.tab-btn.active {
+  background: #3B82F6;
+  color: white;
+  border-color: #3B82F6;
 }
 
 .modal-header h2 {
