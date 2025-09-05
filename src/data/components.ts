@@ -55,5 +55,37 @@ export const components: Component[] = [
     ],
     category: 'Layout',
     complexity: 'medium'
+  },
+  {
+    name: 'FormWithLinkedButton',
+    description: 'A composite component that links FormBuilder with Button using Framer Motion for advanced interactions.',
+    tags: ['form', 'button', 'motion', 'animation', 'linked', 'composite'],
+    features: [
+      'Form and button linking',
+      'Motion animations (scale, rotate, opacity)',
+      'State management between components',
+      'Event triggering',
+      'Loading states',
+      'Multiple link types',
+      'Customizable animations'
+    ],
+    category: 'Composite',
+    complexity: 'complex'
+  },
+  {
+    name: 'FormButtonLink',
+    description: 'A simplified approach to linking forms with buttons using Framer Motion values and transforms.',
+    tags: ['form', 'button', 'motion', 'binding', 'simple', 'linked'],
+    features: [
+      'Motion value binding',
+      'Transform animations',
+      'Auto-enable/disable based on form content',
+      'Pulse and scale effects',
+      'Real-time state feedback',
+      'Debug information display',
+      'Customizable animation duration'
+    ],
+    category: 'Composite',
+    complexity: 'medium'
   }
 ]

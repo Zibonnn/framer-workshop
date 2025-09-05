@@ -1,5 +1,7 @@
+'use client'
+
 import React from 'react'
-import { Link } from 'react-router-dom'
+import Link from 'next/link'
 import { Code, Palette, Zap } from 'lucide-react'
 import './Header.css'
 
@@ -7,13 +9,13 @@ const Header: React.FC = () => {
   return (
     <header className="header">
       <div className="header-container">
-        <Link to="/" className="logo">
+        <Link href="/" className="logo">
           <Zap className="logo-icon" />
           <span className="logo-text">Framer Components</span>
         </Link>
         
         <nav className="nav">
-          <Link to="/" className="nav-link">
+          <Link href="/" className="nav-link">
             <Palette className="nav-icon" />
             Components
           </Link>

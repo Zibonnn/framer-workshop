@@ -1,12 +1,17 @@
+'use client'
+
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Copy, Eye, Download, Search } from 'lucide-react'
 import { components } from '../data/components'
 import ComponentPreview from '../components/ComponentPreview'
 import CodeViewer from '../components/CodeViewer'
 import './ComponentGallery.css'
 
-const ComponentGallery: React.FC = () => {
+interface ComponentGalleryProps {
+  onComponentSelect: (componentId: string) => void
+}
+
+const ComponentGallery: React.FC<ComponentGalleryProps> = ({ onComponentSelect }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
   const [showCode, setShowCode] = useState(false)
@@ -70,7 +75,8 @@ const ComponentGallery: React.FC = () => {
         {filteredComponents.map((component) => (
           <div key={component.name} className="component-card">
             <div className="component-preview">
-              <ComponentPreview componentName={component.name} />
+              <ComponentPreview componentName={component.name} isModal={false} />
+              <div className="component-preview-overlay">Live Preview</div>
             </div>
             
             <div className="component-info">
@@ -87,7 +93,7 @@ const ComponentGallery: React.FC = () => {
             <div className="component-actions">
               <button
                 className="action-btn primary"
-                onClick={() => setSelectedComponent(component.name)}
+                onClick={() => onComponentSelect(component.id)}
               >
                 <Eye className="btn-icon" />
                 Preview
@@ -126,7 +132,7 @@ const ComponentGallery: React.FC = () => {
               </button>
             </div>
             <div className="modal-content">
-              <ComponentPreview componentName={selectedComponent} />
+              <ComponentPreview componentName={selectedComponent} isModal={true} />
             </div>
           </div>
         </div>

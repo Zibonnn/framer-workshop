@@ -1,33 +1,29 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+'use client'
+
+import React, { useState } from 'react'
 import { ArrowLeft, Copy, Download, Code, Palette } from 'lucide-react'
-import { components } from '../data/components'
 import ComponentPreview from '../components/ComponentPreview'
 import CodeViewer from '../components/CodeViewer'
 import './ComponentDetail.css'
 
-const ComponentDetail: React.FC = () => {
-  const { componentName } = useParams<{ componentName: string }>()
-  const [component, setComponent] = useState<any>(null)
+interface ComponentDetailProps {
+  component: any
+  onBack: () => void
+}
+
+const ComponentDetail: React.FC<ComponentDetailProps> = ({ component, onBack }) => {
   const [showCode, setShowCode] = useState(false)
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview')
-
-  useEffect(() => {
-    const foundComponent = components.find(comp => 
-      comp.name.toLowerCase().replace(/\s+/g, '-') === componentName
-    )
-    setComponent(foundComponent || null)
-  }, [componentName])
 
   if (!component) {
     return (
       <div className="component-detail">
         <div className="not-found">
           <h2>Component not found</h2>
-          <Link to="/" className="back-link">
+          <button onClick={onBack} className="back-link">
             <ArrowLeft className="back-icon" />
             Back to Gallery
-          </Link>
+          </button>
         </div>
       </div>
     )
@@ -65,10 +61,10 @@ const ComponentDetail: React.FC = () => {
   return (
     <div className="component-detail">
       <div className="detail-header">
-        <Link to="/" className="back-link">
+        <button onClick={onBack} className="back-link">
           <ArrowLeft className="back-icon" />
           Back to Gallery
-        </Link>
+        </button>
         
         <div className="detail-title">
           <h1>{component.name}</h1>
@@ -116,7 +112,7 @@ const ComponentDetail: React.FC = () => {
         <div className="tab-content">
           {activeTab === 'preview' ? (
             <div className="preview-container">
-              <ComponentPreview componentName={component.name} />
+              <ComponentPreview componentName={component.name} isModal={true} />
             </div>
           ) : (
             <div className="code-container">
